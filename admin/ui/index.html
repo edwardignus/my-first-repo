@@ -1,0 +1,309 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <title>Admin Panel – Alan.i</title>
+
+    <style>
+        :root {
+            --primary: #14b8a6;
+            --bg: #eef2f6;
+            --card: #ffffff;
+            --text: #0f172a;
+            --border: #e5e7eb;
+            --red: #dc2626;
+            --yellow: #ca8a04;
+            --green: #16a34a;
+        }
+
+        * {
+            box-sizing: border-box;
+            font-family: "Segoe UI", sans-serif;
+        }
+
+        body {
+            margin: 0;
+            background: var(--bg);
+            color: var(--text);
+        }
+
+        header {
+            background: white;
+            padding: 18px 40px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid var(--border);
+        }
+
+        header button {
+            background: var(--primary);
+            color: white;
+            border: none;
+            padding: 10px 18px;
+            border-radius: 10px;
+            font-weight: 600;
+            cursor: pointer;
+        }
+
+        main {
+            padding: 40px;
+            max-width: 1100px;
+            margin: auto;
+        }
+
+        .controls {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 25px;
+        }
+
+        select {
+            padding: 10px;
+            border-radius: 8px;
+            border: 1px solid var(--border);
+        }
+
+        .blog-card {
+            background: var(--card);
+            border-radius: 18px;
+            padding: 18px;
+            margin-bottom: 20px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, .08);
+            display: flex;
+            gap: 16px;
+            position: relative;
+        }
+
+        .thumb {
+            width: 140px;
+            height: 100px;
+            border-radius: 12px;
+            object-fit: cover;
+            flex-shrink: 0;
+        }
+
+        .blog-content {
+            flex: 1;
+        }
+
+        .blog-title {
+            font-size: 20px;
+            font-weight: 700;
+        }
+
+        .meta {
+            color: #64748b;
+            font-size: 14px;
+            margin: 6px 0;
+        }
+
+        .badge {
+            padding: 6px 12px;
+            border-radius: 999px;
+            font-weight: 700;
+            font-size: 13px;
+            margin-left: 10px;
+        }
+
+        .low {
+            background: #fee2e2;
+            color: var(--red);
+        }
+
+        .mid {
+            background: #fef3c7;
+            color: var(--yellow);
+        }
+
+        .high {
+            background: #dcfce7;
+            color: var(--green);
+        }
+
+        .actions {
+            margin-top: 12px;
+            display: flex;
+            gap: 10px;
+        }
+
+        .publish-btn {
+            background: var(--primary);
+            color: white;
+            border: none;
+            padding: 8px 14px;
+            border-radius: 10px;
+            cursor: pointer;
+            font-weight: 600;
+        }
+
+        .view-btn {
+            background: #e2e8f0;
+            border: none;
+            padding: 8px 14px;
+            border-radius: 10px;
+            cursor: pointer;
+        }
+
+        .delete-btn {
+            position: absolute;
+            top: 14px;
+            right: 14px;
+            background: transparent;
+            border: none;
+            font-size: 20px;
+            cursor: pointer;
+            color: var(--red);
+        }
+
+        #modal {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, .6);
+            align-items: center;
+            justify-content: center;
+        }
+
+        #modal-content {
+            background: white;
+            padding: 30px;
+            width: 60%;
+            max-height: 80%;
+            overflow: auto;
+            border-radius: 16px;
+        }
+    </style>
+</head>
+
+<body>
+
+    <header>
+        <h2>Alan.<span style="color:var(--primary)">i</span></h2>
+        <button onclick="analyseAI()">Analyse with AI</button>
+    </header>
+
+    <main>
+        <h2>Blog Moderation</h2>
+        <p style="color:#64748b">Review, analyse and publish blogs</p>
+
+        <div class="controls">
+            <select id="scoreFilter" disabled onchange="setScoreFilter(this.value)">
+                <option value="all">All Scores</option>
+                <option value="lt50">Below 50</option>
+                <option value="gte50">50+</option>
+                <option value="gte80">80+</option>
+            </select>
+        </div>
+
+        <div id="blogList"></div>
+    </main>
+
+    <div id="modal">
+        <div id="modal-content">
+            <h3 id="modalTitle"></h3>
+            <p id="modalContent"></p><br>
+            <button class="view-btn" onclick="closeModal()">Close</button>
+        </div>
+    </div>
+
+    <script>
+        let blogs = [];
+        let analysed = false;
+        let scoreFilter = "all";
+
+        async function loadBlogs() {
+            const res = await fetch("http://127.0.0.1:5000/blogs");
+            blogs = await res.json();
+            render();
+        }
+
+        function analyseAI() {
+            fetch("http://127.0.0.1:5000/analyse", { method: "POST" })
+                .then(() => {
+                    analysed = true;
+                    document.getElementById("scoreFilter").disabled = false;
+                    alert("AI analysis completed");
+                    loadBlogs();
+                });
+        }
+
+        function timeAgo(ts) {
+            const diff = Math.floor((Date.now() / 1000 - ts) / 3600);
+            return diff < 24 ? `${diff} hours ago` : `${Math.floor(diff / 24)} days ago`;
+        }
+
+        function setScoreFilter(v) {
+            scoreFilter = v;
+            render();
+        }
+
+        function render() {
+            const list = document.getElementById("blogList");
+            list.innerHTML = "";
+
+            blogs.forEach(b => {
+                if (analysed && b.score !== null) {
+                    if (scoreFilter === "lt50" && b.score >= 50) return;
+                    if (scoreFilter === "gte50" && b.score < 50) return;
+                    if (scoreFilter === "gte80" && b.score < 80) return;
+                    if (b.score < 50) return;
+                }
+
+                list.innerHTML += `
+                <div class="blog-card">
+                    <img class="thumb" src="http://127.0.0.1:5000/${b.image}" />
+                    <button class="delete-btn" onclick="deleteBlog(${b.id})">🗑️</button>
+
+                    <div class="blog-content">
+                        <div class="blog-title">
+                            ${b.title}
+                            ${analysed && b.score !== null
+                        ? `<span class="badge ${b.score < 50 ? 'low' : b.score < 80 ? 'mid' : 'high'}">${b.score}</span>`
+                        : ""}
+                        </div>
+
+                        <div class="meta">
+                            ${b.author} • ${timeAgo(b.created_at)}
+                        </div>
+
+                        <div class="actions">
+                            <button class="view-btn" onclick="viewBlog('${b.title}', \`${b.content}\`)">View</button>
+                            ${analysed && b.score >= 50 && b.status !== "published"
+                        ? `<button class="publish-btn" onclick="publishBlog(${b.id})">Publish</button>`
+                        : ""}
+                        </div>
+                    </div>
+                </div>`;
+            });
+        }
+
+        function viewBlog(t, c) {
+            modalTitle.innerText = t;
+            modalContent.innerText = c;
+            modal.style.display = "flex";
+        }
+
+        function closeModal() {
+            modal.style.display = "none";
+        }
+
+        function publishBlog(id) {
+            fetch(`http://127.0.0.1:5000/publish/${id}`, { method: "PUT" })
+                .then(() => loadBlogs());
+        }
+
+        function deleteBlog(id) {
+            if (!confirm("Delete this blog?")) return;
+
+            fetch(`http://127.0.0.1:5000/delete/${id}`, { method: "DELETE" })
+                .then(() => loadBlogs());
+        }
+
+        loadBlogs();
+    </script>
+
+</body>
+
+</html>

@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <title>Write Blog – Alan.i</title>
+
+    <style>
+        :root {
+            --primary: #14b8a6;
+            --primary-dark: #0f766e;
+            --bg-dark: #eef2f6;
+            --card-bg: #ffffff;
+            --text-dark: #020617;
+            --border: #e5e7eb;
+        }
+
+        * {
+            box-sizing: border-box;
+            font-family: "Segoe UI", sans-serif;
+        }
+
+        body {
+            margin: 0;
+            background: var(--bg-dark);
+            color: var(--text-dark);
+        }
+
+        header {
+            background: white;
+            padding: 18px 40px;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .logo {
+            font-size: 26px;
+            font-weight: 800;
+        }
+
+        main {
+            padding: 40px;
+            max-width: 1200px;
+            margin: auto;
+        }
+
+        .form-card {
+            background: var(--card-bg);
+            border-radius: 24px;
+            padding: 40px;
+            box-shadow: 0 14px 40px rgba(0, 0, 0, 0.1);
+            max-width: 700px;
+            margin: auto;
+        }
+
+        label {
+            font-weight: 700;
+            display: block;
+            margin-bottom: 6px;
+        }
+
+        .hint {
+            font-size: 13px;
+            color: #64748b;
+            margin-bottom: 10px;
+        }
+
+        input,
+        textarea {
+            width: 100%;
+            padding: 14px;
+            border-radius: 14px;
+            border: 1px solid var(--border);
+            margin-bottom: 20px;
+            font-size: 15px;
+        }
+
+        textarea {
+            resize: vertical;
+        }
+
+        .image-upload {
+            border: 2px dashed var(--border);
+            border-radius: 14px;
+            padding: 20px;
+            text-align: center;
+            margin-bottom: 20px;
+            cursor: pointer;
+            background: #f8fafc;
+        }
+
+        .image-upload img {
+            max-width: 100%;
+            max-height: 220px;
+            border-radius: 12px;
+            display: none;
+            margin-top: 12px;
+        }
+
+        .submit-btn {
+            background: var(--primary);
+            color: white;
+            border: none;
+            padding: 15px 26px;
+            border-radius: 16px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            width: 100%;
+        }
+
+        .submit-btn:hover {
+            background: var(--primary-dark);
+        }
+    </style>
+</head>
+
+<body>
+
+    <header>
+        <div class="logo">Alan.<span style="color:var(--primary)">i</span></div>
+    </header>
+
+    <main>
+        <div class="form-card">
+
+            <label>Blog Title *</label>
+            <div class="hint">Give your blog a clear and engaging title</div>
+            <input id="title" placeholder="How AI is Changing Education">
+
+            <label>Author *</label>
+            <div class="hint">Your full name</div>
+            <input id="author" placeholder="Your name">
+
+            <label>Simple Description *</label>
+            <div class="hint">Write one short line describing your blog</div>
+            <textarea id="summary" rows="2" placeholder="One-line description that appears in previews"></textarea>
+
+            <label>Blog Content *</label>
+            <div class="hint">Write your complete blog here</div>
+            <textarea id="content" rows="8" placeholder="Start writing your blog content..."></textarea>
+
+            <label>Cover Image (optional)</label>
+            <div class="hint">Upload an image or we’ll use a default one</div>
+
+            <div class="image-upload" onclick="imageInput.click()">
+                <input type="file" id="imageInput" accept="image/*" hidden />
+                <p>Click to upload image</p>
+                <img id="preview" />
+            </div>
+
+            <button class="submit-btn" onclick="submitBlog()">
+                Submit for Review
+            </button>
+
+        </div>
+    </main>
+
+    <script>
+        const imageInput = document.getElementById("imageInput");
+        const preview = document.getElementById("preview");
+
+        imageInput.addEventListener("change", () => {
+            const file = imageInput.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = () => {
+                preview.src = reader.result;
+                preview.style.display = "block";
+            };
+            reader.readAsDataURL(file);
+        });
+
+        async function submitBlog() {
+            const title = document.getElementById("title").value.trim();
+            const author = document.getElementById("author").value.trim();
+            const summary = document.getElementById("summary").value.trim();
+            const content = document.getElementById("content").value.trim();
+            const image = imageInput.files[0];
+
+            if (!title || !author || !summary || !content) {
+                alert("Please fill all required fields");
+                return;
+            }
+
+            const formData = new FormData();
+            formData.append("title", title);
+            formData.append("author", author);
+            formData.append("summary", summary);
+            formData.append("content", content);
+            if (image) formData.append("image", image);
+
+            try {
+                const res = await fetch("http://127.0.0.1:5000/submit-blog", {
+                    method: "POST",
+                    body: formData
+                });
+
+                if (!res.ok) throw new Error();
+
+                alert("✅ Blog submitted successfully!");
+
+                document.querySelectorAll("input, textarea").forEach(e => e.value = "");
+                preview.style.display = "none";
+                imageInput.value = "";
+
+            } catch {
+                alert("❌ Submission failed. Is backend running?");
+            }
+        }
+    </script>
+
+</body>
+
+</html>
